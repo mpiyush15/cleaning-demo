@@ -215,7 +215,7 @@ export default function DashboardPage() {
 
   // Get last 5 completed cleaning sessions
   const completedSessions = [...appointments]
-    .filter((apt: Appointment & { status: string }) => apt.status === "Completed")
+    .filter((apt) => apt.status === "Completed")
     .sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
