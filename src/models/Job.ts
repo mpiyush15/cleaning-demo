@@ -1,15 +1,16 @@
 import mongoose from "mongoose";
 
-const appointmentSchema = new mongoose.Schema(
+const jobSchema = new mongoose.Schema(
   {
-    fullName: { type: String, required: true },
-    phone: { type: String, required: true },
-    email: { type: String, required: true },
+    appointmentId: { type: String, required: true },
+    customerId: { type: String, default: "" },
+    customerName: { type: String, required: true },
+    customerPhone: { type: String, default: "" },
+    customerEmail: { type: String, default: "" },
     service: { type: String, required: true },
     date: { type: String, required: true },
     time: { type: String, required: true },
-    address: { type: String, required: true },
-    notes: { type: String, default: "" },
+    address: { type: String, default: "" },
     status: { type: String, default: "Pending" },
     assignedStaffId: { type: String, default: null },
     assignedStaffName: { type: String, default: "" },
@@ -18,5 +19,4 @@ const appointmentSchema = new mongoose.Schema(
   { timestamps: false }
 );
 
-export default mongoose.models.Appointment ||
-  mongoose.model("Appointment", appointmentSchema);
+export default mongoose.models.Job || mongoose.model("Job", jobSchema);

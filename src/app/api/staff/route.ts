@@ -13,7 +13,7 @@ type StaffInput = {
 export async function GET() {
   try {
     await connectDB();
-    const staff = await StaffModel.find();
+    const staff = await StaffModel.find().sort({ createdAt: -1 });
     return NextResponse.json({ staff, total: staff.length });
   } catch (error) {
     console.error("Error fetching staff:", error);
@@ -36,22 +36,51 @@ export async function POST(request: Request) {
       );
     }
 
-    const newStaff = await StaffModel.create({
-      name: payload.name,
-      phone: payload.phone,
-      specialization: payload.specialization,
-      hourlyRate: payload.hourlyRate,
-      status: payload.status || "Active",
-    });
+    console.log("Creating staff with:", payload);
 
+    try {
+      const newStaff = await StaffModel.create({
+        name: payload.name,
+        phone: payload.phone,
+        specialization: payload.specialization,
+        hourlyRate: payload.hourlyRate,
+        status: payload.status || "Active",
+      });
+
+      console.log("Staff created:", newStaff);
+
+      return NextResponse.json(
+        { message: "Staff member created", staff: newStaff },
+        { status: 201 }
+      );
+    } catch (createError: any) {
+      // Handle duplicate key error on old index
+      if (createError.code === 11000 && createError.message.includes("id")) {
+        console.log("Attempting to drop old index and retry...");
+        try {
+          await StaffModel.collection.dropIndex("id_1");
+          // Retry creation
+          const newStaff = await StaffModel.create({
+            name: payload.name,
+            phone: payload.phone,
+            specialization: payload.specialization,
+            hourlyRate: payload.hourlyRate,
+            status: payload.status || "Active",
+          });
+          return NextResponse.json(
+            { message: "Staff member created", staff: newStaff },
+            { status: 201 }
+          );
+        } catch (retryError) {
+          throw createError;
+        }
+      }
+      throw createError;
+    }
+  } catch (error: any) {
+    console.error("Error creating staff:", error.message || error);
     return NextResponse.json(
-      { message: "Staff member created", staff: newStaff },
-      { status: 201 }
-    );
-  } catch (error) {
-    console.error("Error creating staff:", error);
-    return NextResponse.json(
-      { message: "Error creating staff member" },
+      { message: "Error creating staff member", error: error.message },
       { status: 500 }
     );
   }
@@ -72,7 +101,7 @@ export async function PUT(request: Request) {
     }
 
     const staff = await StaffModel.findByIdAndUpdate(id, updates, {
-      new: true,
+      returnDocument: "after",
     });
 
     if (!staff) {

@@ -14,7 +14,65 @@ type ServiceInput = {
 export async function GET() {
   try {
     await connectDB();
-    const services = await ServiceModel.find();
+    let services = await ServiceModel.find();
+
+    // If no services exist, seed them from mock data
+    if (services.length === 0) {
+      const SERVICES = [
+        {
+          title: "Deep Home Cleaning",
+          description: "Complete sanitization for your entire living space",
+          price: 8999,
+          duration: "4-5 hours",
+          image: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&h=400&fit=crop&q=80",
+          popular: true,
+        },
+        {
+          title: "Bathroom Deep Cleaning",
+          description: "Professional bathroom restoration & sanitation",
+          price: 2999,
+          duration: "1.5-2 hours",
+          image: "https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=600&h=400&fit=crop&q=80",
+          popular: false,
+        },
+        {
+          title: "Kitchen Deep Cleaning",
+          description: "Complete kitchen sanitization & degreasing",
+          price: 3999,
+          duration: "2-2.5 hours",
+          image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&h=400&fit=crop&q=80",
+          popular: false,
+        },
+        {
+          title: "Sofa & Carpet Shampooing",
+          description: "Professional fabric & carpet rejuvenation",
+          price: 4999,
+          duration: "2-3 hours",
+          image: "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=600&h=400&fit=crop&q=80",
+          popular: false,
+        },
+        {
+          title: "Office Cleaning",
+          description: "Corporate workspace maintenance packages",
+          price: 12999,
+          duration: "Customizable",
+          image: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&h=400&fit=crop&q=80",
+          popular: true,
+        },
+        {
+          title: "Window & Glass Cleaning",
+          description: "Crystal-clear windows inside and out",
+          price: 1999,
+          duration: "1-1.5 hours",
+          image: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&h=400&fit=crop&q=80",
+          popular: false,
+        },
+      ];
+
+      services = await ServiceModel.insertMany(SERVICES);
+      console.log("Services seeded successfully");
+    }
+
     return NextResponse.json({ services, total: services.length });
   } catch (error) {
     console.error("Error fetching services:", error);
@@ -74,7 +132,7 @@ export async function PUT(request: Request) {
     }
 
     const service = await ServiceModel.findByIdAndUpdate(id, updates, {
-      new: true,
+      returnDocument: "after",
     });
 
     if (!service) {

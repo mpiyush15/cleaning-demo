@@ -4,7 +4,7 @@ import { useSession, signOut } from "next-auth/react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
-import { MdDashboard, MdEventNote, MdPeople, MdLocalOffer, MdAnalytics, MdLogout, MdPayment, MdMenu, MdClose, MdPersonAdd } from "react-icons/md";
+import { MdDashboard, MdEventNote, MdPeople, MdLocalOffer, MdAnalytics, MdLogout, MdPayment, MdMenu, MdClose, MdPersonAdd, MdAssignment } from "react-icons/md";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
@@ -64,6 +64,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           >
             <MdPersonAdd size={20} />
             <span>Staff</span>
+          </Link>
+          <Link
+            href="/dashboard/jobs"
+            className="flex items-center gap-3 rounded-lg px-3 py-2 font-light text-slate-700 hover:bg-slate-50"
+          >
+            <MdAssignment size={20} />
+            <span>Jobs</span>
           </Link>
           <Link
             href="/dashboard/reports"
@@ -144,6 +151,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               >
                 <MdPersonAdd size={20} />
                 <span>Staff</span>
+              </Link>
+              <Link
+                href="/dashboard/jobs"
+                onClick={() => setSidebarOpen(false)}
+                className="flex items-center gap-3 rounded-lg px-3 py-2 font-light text-slate-700 hover:bg-slate-50"
+              >
+                <MdAssignment size={20} />
+                <span>Jobs</span>
               </Link>
               <Link
                 href="/dashboard/reports"

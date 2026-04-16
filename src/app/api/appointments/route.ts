@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import AppointmentModel from "@/models/Appointment";
+import JobModel from "@/models/Job";
 
 type AppointmentInput = {
   fullName: string;
@@ -84,8 +85,8 @@ export async function PUT(request: Request) {
       (await request.json()) as {
         id: string;
         status?: string;
-        assignedStaffId?: number;
-        assignedStaffName?: string;
+        assignedStaffId?: number | null;
+        assignedStaffName?: string | null;
       };
 
     if (!id) {
@@ -95,14 +96,16 @@ export async function PUT(request: Request) {
       );
     }
 
+    const updates: any = {};
+    
+    if (status) updates.status = status;
+    if (assignedStaffId !== undefined) updates.assignedStaffId = assignedStaffId;
+    if (assignedStaffName !== undefined) updates.assignedStaffName = assignedStaffName || "";
+
     const appointment = await AppointmentModel.findByIdAndUpdate(
       id,
-      {
-        ...(status && { status }),
-        ...(assignedStaffId !== undefined && { assignedStaffId }),
-        ...(assignedStaffName && { assignedStaffName }),
-      },
-      { new: true }
+      updates,
+      { returnDocument: "after" }
     );
 
     if (!appointment) {
@@ -110,6 +113,20 @@ export async function PUT(request: Request) {
         { message: "Appointment not found" },
         { status: 404 }
       );
+    }
+
+    // Sync all related jobs with the same status
+    if (status) {
+      try {
+        await JobModel.updateMany(
+          { appointmentId: id },
+          { $set: { status } }
+        );
+        console.log(`Jobs for appointment ${id} status updated to ${status}`);
+      } catch (syncError) {
+        console.error("Error syncing job status:", syncError);
+        // Don't fail the appointment update if job sync fails
+      }
     }
 
     return NextResponse.json({

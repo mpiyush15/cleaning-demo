@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { MdDelete, MdEdit, MdAdd } from "react-icons/md";
 
 type Staff = {
-  id: number;
+  _id?: string;
+  id?: number;
   name: string;
   phone: string;
   specialization: string;
@@ -16,7 +17,7 @@ export default function StaffPage() {
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -60,7 +61,7 @@ export default function StaffPage() {
         specialization: staffMember.specialization,
         hourlyRate: staffMember.hourlyRate.toString(),
       });
-      setEditingId(staffMember.id);
+      setEditingId(staffMember._id || null);
     } else {
       setFormData({
         name: "",
@@ -118,7 +119,7 @@ export default function StaffPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string | number | undefined) => {
     if (!confirm("Are you sure you want to delete this staff member?")) return;
 
     try {
@@ -177,7 +178,7 @@ export default function StaffPage() {
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {staffList.map((member) => (
-                  <tr key={member.id} className="hover:bg-slate-50 transition-colors">
+                  <tr key={member._id || member.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 text-sm text-slate-900 font-medium">{member.name}</td>
                     <td className="px-6 py-4 text-sm text-slate-600">{member.phone}</td>
                     <td className="px-6 py-4 text-sm text-slate-600">{member.specialization}</td>
@@ -197,7 +198,7 @@ export default function StaffPage() {
                           <MdEdit size={18} />
                         </button>
                         <button
-                          onClick={() => handleDelete(member.id)}
+                          onClick={() => handleDelete(member._id || member.id)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
                           title="Delete"
                         >
