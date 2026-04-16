@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-// import nodemailer from "nodemailer";
-import { jsPDF } from "jspdf";
 
 interface EmailBillingRequest {
   billingId: string;
