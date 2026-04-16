@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
+import { connectDB } from "@/lib/db";
+import AppointmentModel from "@/models/Appointment";
 
-type Appointment = {
-  id: string;
+type AppointmentInput = {
   fullName: string;
   phone: string;
   email: string;
@@ -9,21 +10,8 @@ type Appointment = {
   date: string;
   time: string;
   address: string;
-  notes: string;
-  createdAt: string;
-  status?: string;
-  assignedStaffId?: number;
-  assignedStaffName?: string;
+  notes?: string;
 };
-
-type AppointmentInput = Omit<Appointment, "id" | "createdAt">;
-
-declare global {
-  var appointmentsStore: Appointment[] | undefined;
-}
-
-const appointments = globalThis.appointmentsStore ?? [];
-globalThis.appointmentsStore = appointments;
 
 function hasRequiredFields(payload: Partial<AppointmentInput>) {
   return (
@@ -38,65 +26,101 @@ function hasRequiredFields(payload: Partial<AppointmentInput>) {
 }
 
 export async function POST(request: Request) {
-  const payload = (await request.json()) as Partial<AppointmentInput>;
+  try {
+    await connectDB();
 
-  if (!hasRequiredFields(payload)) {
-    return NextResponse.json({ message: "Please fill all required fields." }, { status: 400 });
+    const payload = (await request.json()) as Partial<AppointmentInput>;
+
+    if (!hasRequiredFields(payload)) {
+      return NextResponse.json(
+        { message: "Please fill all required fields." },
+        { status: 400 }
+      );
+    }
+
+    const appointment = await AppointmentModel.create({
+      fullName: payload.fullName,
+      phone: payload.phone,
+      email: payload.email,
+      service: payload.service,
+      date: payload.date,
+      time: payload.time,
+      address: payload.address,
+      notes: payload.notes ?? "",
+    });
+
+    return NextResponse.json(
+      { message: "Appointment created", appointment },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Error creating appointment:", error);
+    return NextResponse.json(
+      { message: "Error creating appointment" },
+      { status: 500 }
+    );
   }
-
-  const appointment: Appointment = {
-    id: crypto.randomUUID(),
-    fullName: payload.fullName!,
-    phone: payload.phone!,
-    email: payload.email!,
-    service: payload.service!,
-    date: payload.date!,
-    time: payload.time!,
-    address: payload.address!,
-    notes: payload.notes ?? "",
-    createdAt: new Date().toISOString(),
-  };
-
-  appointments.unshift(appointment);
-
-  return NextResponse.json({ message: "Appointment created", appointment }, { status: 201 });
 }
 
 export async function GET() {
-  return NextResponse.json({ appointments, total: appointments.length });
+  try {
+    await connectDB();
+    const appointments = await AppointmentModel.find().sort({ createdAt: -1 });
+    return NextResponse.json({ appointments, total: appointments.length });
+  } catch (error) {
+    console.error("Error fetching appointments:", error);
+    return NextResponse.json(
+      { message: "Error fetching appointments" },
+      { status: 500 }
+    );
+  }
 }
 
 export async function PUT(request: Request) {
-  const { id, status, assignedStaffId, assignedStaffName } = (await request.json()) as { 
-    id: string; 
-    status?: string;
-    assignedStaffId?: number;
-    assignedStaffName?: string;
-  };
+  try {
+    await connectDB();
 
-  if (!id) {
-    return NextResponse.json({ message: "Appointment ID is required" }, { status: 400 });
-  }
+    const { id, status, assignedStaffId, assignedStaffName } =
+      (await request.json()) as {
+        id: string;
+        status?: string;
+        assignedStaffId?: number;
+        assignedStaffName?: string;
+      };
 
-  const appointmentIndex = appointments.findIndex((apt) => apt.id === id || apt.id.includes(id));
+    if (!id) {
+      return NextResponse.json(
+        { message: "Appointment ID is required" },
+        { status: 400 }
+      );
+    }
 
-  if (appointmentIndex === -1) {
-    return NextResponse.json({ message: "Appointment not found" }, { status: 404 });
-  }
+    const appointment = await AppointmentModel.findByIdAndUpdate(
+      id,
+      {
+        ...(status && { status }),
+        ...(assignedStaffId !== undefined && { assignedStaffId }),
+        ...(assignedStaffName && { assignedStaffName }),
+      },
+      { new: true }
+    );
 
-  // Update the appointment status or staff assignment
-  if (status) {
-    appointments[appointmentIndex].status = status;
-  }
-  if (assignedStaffId) {
-    appointments[appointmentIndex].assignedStaffId = assignedStaffId;
-  }
-  if (assignedStaffName) {
-    appointments[appointmentIndex].assignedStaffName = assignedStaffName;
-  }
+    if (!appointment) {
+      return NextResponse.json(
+        { message: "Appointment not found" },
+        { status: 404 }
+      );
+    }
 
-  return NextResponse.json({
-    message: "Appointment updated",
-    appointment: appointments[appointmentIndex],
-  });
+    return NextResponse.json({
+      message: "Appointment updated",
+      appointment,
+    });
+  } catch (error) {
+    console.error("Error updating appointment:", error);
+    return NextResponse.json(
+      { message: "Error updating appointment" },
+      { status: 500 }
+    );
+  }
 }

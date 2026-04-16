@@ -1,77 +1,125 @@
 import { NextResponse } from "next/server";
+import { connectDB } from "@/lib/db";
+import StaffModel from "@/models/Staff";
 
-type Staff = {
-  id: number;
+type StaffInput = {
   name: string;
   phone: string;
   specialization: string;
   hourlyRate: number;
-  createdAt: string;
   status?: "Active" | "Inactive";
 };
 
-type StaffInput = Omit<Staff, "id" | "createdAt" | "status">;
-
-declare global {
-  var staffStore: Staff[] | undefined;
-}
-
-const staff = globalThis.staffStore ?? [];
-globalThis.staffStore = staff;
-
 export async function GET() {
-  return NextResponse.json({ staff, total: staff.length });
+  try {
+    await connectDB();
+    const staff = await StaffModel.find();
+    return NextResponse.json({ staff, total: staff.length });
+  } catch (error) {
+    console.error("Error fetching staff:", error);
+    return NextResponse.json(
+      { message: "Error fetching staff" },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(request: Request) {
-  const payload = (await request.json()) as StaffInput;
+  try {
+    await connectDB();
+    const payload = (await request.json()) as StaffInput;
 
-  if (!payload.name || !payload.phone || !payload.specialization || !payload.hourlyRate) {
+    if (!payload.name || !payload.phone || !payload.specialization || !payload.hourlyRate) {
+      return NextResponse.json(
+        { message: "All fields are required" },
+        { status: 400 }
+      );
+    }
+
+    const newStaff = await StaffModel.create({
+      name: payload.name,
+      phone: payload.phone,
+      specialization: payload.specialization,
+      hourlyRate: payload.hourlyRate,
+      status: payload.status || "Active",
+    });
+
     return NextResponse.json(
-      { message: "All fields are required" },
-      { status: 400 }
+      { message: "Staff member created", staff: newStaff },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Error creating staff:", error);
+    return NextResponse.json(
+      { message: "Error creating staff member" },
+      { status: 500 }
     );
   }
-
-  const newStaff: Staff = {
-    id: Math.max(...staff.map((s) => s.id), 0) + 1,
-    name: payload.name,
-    phone: payload.phone,
-    specialization: payload.specialization,
-    hourlyRate: payload.hourlyRate,
-    createdAt: new Date().toISOString(),
-    status: "Active",
-  };
-
-  staff.push(newStaff);
-  return NextResponse.json({ message: "Staff member created", staff: newStaff }, { status: 201 });
 }
 
 export async function PUT(request: Request) {
-  const { id, ...updates } = (await request.json()) as Partial<Staff> & { id: number };
+  try {
+    await connectDB();
+    const { id, ...updates } = (await request.json()) as StaffInput & {
+      id: string;
+    };
 
-  const staffIndex = staff.findIndex((s) => s.id === id);
-  if (staffIndex === -1) {
-    return NextResponse.json({ message: "Staff not found" }, { status: 404 });
+    if (!id) {
+      return NextResponse.json(
+        { message: "Staff ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const staff = await StaffModel.findByIdAndUpdate(id, updates, {
+      new: true,
+    });
+
+    if (!staff) {
+      return NextResponse.json(
+        { message: "Staff not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ message: "Staff updated", staff });
+  } catch (error) {
+    console.error("Error updating staff:", error);
+    return NextResponse.json(
+      { message: "Error updating staff" },
+      { status: 500 }
+    );
   }
-
-  staff[staffIndex] = { ...staff[staffIndex], ...updates };
-  return NextResponse.json({ message: "Staff updated", staff: staff[staffIndex] });
 }
 
 export async function DELETE(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const id = parseInt(searchParams.get("id") || "");
+  try {
+    await connectDB();
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
 
-  if (!id) {
-    return NextResponse.json({ message: "ID is required" }, { status: 400 });
+    if (!id) {
+      return NextResponse.json(
+        { message: "ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const staff = await StaffModel.findByIdAndDelete(id);
+
+    if (!staff) {
+      return NextResponse.json(
+        { message: "Staff not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ message: "Staff deleted", staff });
+  } catch (error) {
+    console.error("Error deleting staff:", error);
+    return NextResponse.json(
+      { message: "Error deleting staff" },
+      { status: 500 }
+    );
   }
-
-  const staffIndex = staff.findIndex((s) => s.id === id);
-  if (staffIndex === -1) {
-    return NextResponse.json({ message: "Staff not found" }, { status: 404 });
-  }
-
-  const deletedStaff = staff.splice(staffIndex, 1)[0];
-  return NextResponse.json({ message: "Staff deleted", staff: deletedStaff });
 }
