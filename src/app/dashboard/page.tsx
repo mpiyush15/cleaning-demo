@@ -206,13 +206,21 @@ export default function DashboardPage() {
 
   // Get recent 5 appointments (sorted by createdAt, newest first)
   const recentAppointments = [...appointments]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    })
     .slice(0, 5);
 
   // Get last 5 completed cleaning sessions
   const completedSessions = [...appointments]
     .filter((apt: Appointment & { status: string }) => apt.status === "Completed")
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    })
     .slice(0, 5);
 
   return (
